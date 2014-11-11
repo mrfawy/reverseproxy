@@ -1,6 +1,7 @@
 import readline
 import os
 import re
+import argparse
 
 class bcolors:
     HEADER = '\033[95m'
@@ -19,10 +20,10 @@ def rlinput(prompt, prefill=''):
 
 def read_acceptance():
     while True:
-        choice=input("Do you accept this modification?[Y|N]")
+        choice=input("Do you accept this modification?[Y|S]")
         if choice.lower()=="y":
             return True
-        if choice.lower()=="n":
+        if choice.lower()=="s":
             return False
 
 def prompt_line_Change(pre_line,post_lines):
@@ -31,10 +32,12 @@ def prompt_line_Change(pre_line,post_lines):
     for post_line in post_lines:
         print (post_line)
     accept=read_acceptance()
-    while not accept:
-          post_line=rlinput("Please Edit :\n",post_line)
-          accept=read_acceptance()
-    return post_line
+    if not accept:
+        post_lines=pre_line
+    #while not accept:
+          #post_line=rlinput("Please Edit :\n",post_lines)
+          #accept=read_acceptance()
+    return post_lines
 
 def get_buffered_lines_indexes(lines,pos,window=5):
     if pos<0 or pos>len(lines):
@@ -48,9 +51,9 @@ def get_buffered_lines_indexes(lines,pos,window=5):
        end_index=len(lines)
     return int(start_index),int(end_index)
 
-def draw_file_contents(lines,pos):
+def draw_file_contents(filepath,lines,pos):
     os.system('clear')
-    print("File Contents:")
+    print("File Contents:"+filepath)
     print("---------------")
     start_index,end_index=get_buffered_lines_indexes(lines,pos,5)
     for index in range(start_index,end_index):
@@ -71,40 +74,74 @@ def get_suggested_line(line,matched_pattern,count=1):
     startIndex=line.find(matched_pattern)
     if(startIndex!=-1):
         endIndex=line.find('"',startIndex)
+        leadingSpacesNo=len(line) - len(line.lstrip())
+        leadingSpacesTxt=" ".join(" " for i in range(0,leadingSpacesNo*4))
         convTemplate="""<cfinvoke component="NBP.NetBiosProxyHelper" method="getTemplatePathForACWithEncryptedValue" fileName="{1}" returnvariable="{0}" />"""
         replaceToken="#encryptedValue"+str(count)+"#"
         textToBeReplaced=line[startIndex:endIndex]
         convLine=convTemplate.format(replaceToken,textToBeReplaced)
         new_line=line[0:startIndex]+replaceToken+line[endIndex:len(line)]
-        return [convLine,new_line]
+        convLine=leadingSpacesTxt+convLine
+        return [convLine,leadingSpacesTxt+"<cfoutput>",new_line,leadingSpacesTxt+"</cfoutput>"]
     else:
-        raise Exception("invalid processing ")
+        print ("invalid processing ")
+        return ["ERROR!! : unable to retreive this line suggesstions!!"]
+
+def edit_file(patterns,filepath):
+    print ("Editing File :"+filepath)
+    old_lines=open(filepath,"r").readlines()
+    new_lines=[]
+    count=1 #counter for current changes in file
+    for pos in range(len(old_lines)):
+        line=old_lines[pos]
+        matched_pattern=is_matching_line(line,patterns)
+        if matched_pattern != False:
+            draw_file_contents(filepath,old_lines,pos)
+            pre_line=line
+            post_lines=get_suggested_line(pre_line,matched_pattern,count)
+            post_lines=prompt_line_Change(pre_line,post_lines)
+            new_lines.extend(post_lines)
+            count+=1
+        else:
+         new_lines.append(line+"\n")
+    output=open(filepath+"_new","w")
+    output.write("\n".join(new_lines))
 
 
-patterns=["/download/","/manuals","/HelpDoc","/reports/"]
-old_lines=open("agreement.cfm","r").readlines()
-new_lines=[]
-count=1 #counter for current changes in file
-for pos in range(len(old_lines)):
-    line=old_lines[pos]
-    matched_pattern=is_matching_line(line,patterns)
-    if matched_pattern != False:
-        draw_file_contents(old_lines,pos)
-        pre_line=line
-        post_line=get_suggested_line(pre_line,matched_pattern)
-        post_line=prompt_line_Change(pre_line,post_line)
-        new_lines.append(post_line)
-        count+=1
-    else:
-     new_lines.append(line+"\n")
-output=open("foo_tmp.txt","w")
-output.write("\n".join(new_lines))
+def process_Files(patterns,full_file_paths):
+    print ("Starting Python processing")
+    for filepath in full_file_paths:
+        edit_file(patterns,filepath)
 
 
+def get_filepaths(directory,includePatterns,skip_patterns):
 
-"""
-before_line="before reverse proxy line !!"
-after_line="after removing ,I'm new :)"
-value=prompt_line_Change(before_line,after_line)
-print("modified as:\n "+value)
-"""
+    file_paths = []  # List which will store all of the full filepaths.
+    # Walk the tree.
+    for root, directories, files in os.walk(directory):
+        for filename in files:
+            # Join the two strings in order to form the full filepath.
+            filepath = os.path.join(root, filename)
+            for includePattern in includePatterns:
+                if includePattern in filepath:
+                    skipFlag=False
+                    for skip_pattern in skip_patterns:
+                        if skip_pattern  in filepath:
+                            skipFlag=True
+                    if not skipFlag :
+                        file_paths.append(filepath)
+    return file_paths
+
+# Start of the Script
+parser = argparse.ArgumentParser()
+parser.add_argument("path", help="directory path to start scanning ")
+parser.add_argument("-p","--pattern",nargs = '*' , help="list of pattern(s) to match ,please refer to Python Regex documentation .Default:'/download/' '/manuals' '/HelpDoc' '/reports/'",action="append",default=[["/download/","/manuals","/HelpDoc","/reports/"]])
+
+
+args = parser.parse_args()
+DIR_PATH=args.path
+PATTERNS=args.pattern
+full_file_paths = get_filepaths(DIR_PATH,[".cfm","cfc"],[".svn",".git"])
+print(full_file_paths)
+process_Files(PATTERNS[-1],full_file_paths) # -1  to always get the last , as if parm is submitted it's appended
+print ("DONE")
