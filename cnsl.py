@@ -67,7 +67,7 @@ def is_matching_line(line,patterns):
     for pattern in patterns :
         if  re.search(pattern, line.lower(),re.IGNORECASE):
             return pattern
-    return False
+    return None
 
 def get_suggested_line(line,matched_pattern,count=1):
 
@@ -75,7 +75,7 @@ def get_suggested_line(line,matched_pattern,count=1):
     if(startIndex!=-1):
         endIndex=line.find('"',startIndex)
         leadingSpacesNo=len(line) - len(line.lstrip())
-        leadingSpacesTxt=" ".join(" " for i in range(0,leadingSpacesNo*4))
+        leadingSpacesTxt=" ".join("\t" for i in range(0,leadingSpacesNo))
         convTemplate="""<cfinvoke component="NBP.NetBiosProxyHelper" method="getTemplatePathForACWithEncryptedValue" fileName="{1}" returnvariable="{0}" />"""
         replaceToken="#encryptedValue"+str(count)+"#"
         textToBeReplaced=line[startIndex:endIndex]
@@ -88,14 +88,20 @@ def get_suggested_line(line,matched_pattern,count=1):
         return ["ERROR!! : unable to retreive this line suggesstions!!"]
 
 def edit_file(patterns,filepath):
-    print ("Editing File :"+filepath)
-    old_lines=open(filepath,"r").readlines()
+    print ("Scanning File :"+filepath)
+    old_lines=[]
+    try:
+        old_lines=open(filepath,"r").readlines()
+    except:
+        print("unable to read/parse file "+filepath)
+        print("Skipping to next file")
+        return
     new_lines=[]
     count=1 #counter for current changes in file
     for pos in range(len(old_lines)):
         line=old_lines[pos]
         matched_pattern=is_matching_line(line,patterns)
-        if matched_pattern != False:
+        if matched_pattern :
             draw_file_contents(filepath,old_lines,pos)
             pre_line=line
             post_lines=get_suggested_line(pre_line,matched_pattern,count)
@@ -104,8 +110,9 @@ def edit_file(patterns,filepath):
             count+=1
         else:
          new_lines.append(line+"\n")
-    output=open(filepath+"_new","w")
+    output=open(filepath,"w")
     output.write("\n".join(new_lines))
+
 
 
 def process_Files(patterns,full_file_paths):
@@ -116,6 +123,7 @@ def process_Files(patterns,full_file_paths):
 
 def get_filepaths(directory,includePatterns,skip_patterns):
 
+    print("building file paths recursively ")
     file_paths = []  # List which will store all of the full filepaths.
     # Walk the tree.
     for root, directories, files in os.walk(directory):
