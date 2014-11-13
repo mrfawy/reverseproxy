@@ -1,8 +1,23 @@
-import readline
+#import readline
 import http.client, urllib
 import os
 import re
 import argparse
+
+OS_IS_WIN=False
+SkippedRecords=[]
+ModifiedFilesList=[]
+currentProcessedFilePath=""
+currentProcessedLineNo=""
+currentProcessedLineTxt=""
+currentProcessedRecord=None
+
+class Record:
+    def __init__(self,file_path="",line_number="",line=""):
+        self.file_name=file_name
+        self.file_path=file_path
+        self.line_number=line_number
+        self.line=line
 
 class bcolors:
     HEADER = '\033[95m'
@@ -12,12 +27,12 @@ class bcolors:
     FAIL = '\033[91m'
     ENDC = '\033[0m'
 
-def rlinput(prompt, prefill=''):
-   readline.set_startup_hook(lambda: readline.insert_text(prefill))
-   try:
-      return input(prompt)
-   finally:
-      readline.set_startup_hook()
+# def rlinput(prompt, prefill=''):
+#    readline.set_startup_hook(lambda: readline.insert_text(prefill))
+#    try:
+#       return input(prompt)
+#    finally:
+#       readline.set_startup_hook()
 
 def read_acceptance():
     while True:
@@ -53,7 +68,10 @@ def get_buffered_lines_indexes(lines,pos,window=5):
     return int(start_index),int(end_index)
 
 def draw_file_contents(filepath,lines,pos):
-    os.system('clear')
+    if OS_IS_WIN:
+        os.system('cls')
+    else:
+        os.system('clear')
     print("File Contents:"+filepath)
     print("---------------")
     start_index,end_index=get_buffered_lines_indexes(lines,pos,5)
@@ -76,7 +94,10 @@ def get_suggested_line(line,matched_pattern,count=1):
     if(startIndex!=-1):
         endIndex=line.find('"',startIndex)
         leadingSpacesNo=len(line) - len(line.lstrip())
-        leadingSpacesTxt=" ".join("\t" for i in range(0,leadingSpacesNo))
+        if OS_IS_WIN:
+            leadingSpacesTxt=" ".join(" " for i in range(0,leadingSpacesNo))
+        else:
+            leadingSpacesTxt=" ".join("\t" for i in range(0,leadingSpacesNo))
         convTemplate="""<cfinvoke component="NBP.NetBiosProxyHelper" method="getTemplatePathForACWithEncryptedValue" fileName="{1}" returnvariable="{0}" />"""
         replaceToken="#encryptedValue"+str(count)+"#"
         textToBeReplaced=line[startIndex:endIndex]
@@ -88,15 +109,36 @@ def get_suggested_line(line,matched_pattern,count=1):
         print ("invalid processing ")
         return ["ERROR!! : unable to retreive this line suggesstions!!"]
 
-def edit_file(patterns,filepath):
-    print ("Scanning File :"+filepath)
-    old_lines=[]
+def is_file_contains_Patterns(patterns,filepath):
+    lines=[]
     try:
-        old_lines=open(filepath,"r").readlines()
+        lines=open(filepath,"r").readlines()
     except:
         print("unable to read/parse file "+filepath)
-        print("Skipping to next file")
+        return False
+    for line in lines:
+        if is_matching_line(line,patterns):
+            return True
+    return False
+
+def prompt_file_Change(filepath):
+    print("File:"+filepath)
+    print("is matching with one or more patterns, it'll be edited")
+    accept=read_acceptance()
+    if accept:
+        return True
+    return False
+
+def process_file(patterns,filepath):
+    print ("Scanning File :"+filepath)
+    isMatchingFile=is_file_contains_Patterns(patterns,filepath)
+    if not isMatchingFile:
         return
+    else:
+        if not prompt_file_Change(filepath):
+            return
+    #start editing file
+    old_lines=open(filepath,"r").readlines()
     new_lines=[]
     count=1 #counter for current changes in file
     for pos in range(len(old_lines)):
@@ -115,16 +157,15 @@ def edit_file(patterns,filepath):
     output.write("\n".join(new_lines))
 
 
-
 def process_Files(patterns,full_file_paths):
     print ("Starting Python processing")
     for filepath in full_file_paths:
-        edit_file(patterns,filepath)
+        process_file(patterns,filepath)
 
 
 def get_filepaths(directory,includePatterns,skip_patterns):
 
-    print("building file paths recursively ")
+    print("building file paths recursively ... ")
     file_paths = []  # List which will store all of the full filepaths.
     # Walk the tree.
     for root, directories, files in os.walk(directory):
@@ -141,20 +182,8 @@ def get_filepaths(directory,includePatterns,skip_patterns):
                         file_paths.append(filepath)
     return file_paths
 
-# Start of the Script
-parser = argparse.ArgumentParser()
-parser.add_argument("path", help="directory path to start scanning ")
-parser.add_argument("-p","--pattern",nargs = '*' , help="list of pattern(s) to match ,please refer to Python Regex documentation .Default:'/download/' '/manuals' '/HelpDoc' '/reports/'",action="append",default=[["/download/","/manuals","/HelpDoc","/reports/"]])
 
-
-args = parser.parse_args()
-DIR_PATH=args.path
-PATTERNS=args.pattern
-full_file_paths = get_filepaths(DIR_PATH,[".cfm","cfc"],[".svn",".git"])
-print(full_file_paths)
-process_Files(PATTERNS[-1],full_file_paths) # -1  to always get the last , as if parm is submitted it's appended
-print ("DONE")
-
+#To retreive encrypted value via Restful call
 def getEncryptedUrl(url):
     url=""
     params = urllib.urlencode({'@url': url})
@@ -164,3 +193,20 @@ def getEncryptedUrl(url):
     response = conn.getresponse()
     print (response.status)
     data = response.read()
+
+# Start of the Script
+parser = argparse.ArgumentParser()
+parser.add_argument("path", help="directory path to start scanning ")
+parser.add_argument("-p","--pattern",nargs = '*' , help="list of pattern(s) to match ,please refer to Python Regex documentation .Default:'/download/' '/manuals' '/HelpDoc' '/reports/'",action="append",default=[["/download/","/manuals","/HelpDoc","/reports/"]])
+
+args = parser.parse_args()
+DIR_PATH=args.path
+PATTERNS=args.pattern
+if "nt" in os.name:
+    print ("Detected Windows like OS")
+    OS_IS_WIN=True
+full_file_paths = get_filepaths(DIR_PATH,[".cfm","cfc"],[".svn",".git"])
+process_Files(PATTERNS[-1],full_file_paths) # -1  to always get the last , as if parm is submitted it's appended
+print ("DONE")
+
+
