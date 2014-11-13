@@ -1,4 +1,5 @@
 import readline
+import http.client, urllib
 import os
 import re
 import argparse
@@ -58,7 +59,7 @@ def draw_file_contents(filepath,lines,pos):
     start_index,end_index=get_buffered_lines_indexes(lines,pos,5)
     for index in range(start_index,end_index):
         if index==pos:
-           print (bcolors.WARNING+lines[index]+bcolors.ENDC)
+           print (bcolors.OKBLUE+lines[index]+bcolors.ENDC)
         else:
             print(lines[index])
     print("=======================================================================================================================")
@@ -153,3 +154,13 @@ full_file_paths = get_filepaths(DIR_PATH,[".cfm","cfc"],[".svn",".git"])
 print(full_file_paths)
 process_Files(PATTERNS[-1],full_file_paths) # -1  to always get the last , as if parm is submitted it's appended
 print ("DONE")
+
+def getEncryptedUrl(url):
+    url=""
+    params = urllib.urlencode({'@url': url})
+    headers = {"Content-type": "application/x-www-form-urlencoded","Accept": "text/plain"}
+    conn = httplib.HTTPConnection(url)
+    conn.request("POST", "", params, headers)
+    response = conn.getresponse()
+    print (response.status)
+    data = response.read()
