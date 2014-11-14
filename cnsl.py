@@ -203,20 +203,7 @@ class FileProcessor:
         print (response.status)
         data = response.read()
 
-# Start of the Script
-parser = argparse.ArgumentParser()
-parser.add_argument("path", help="directory path to start scanning ")
-parser.add_argument("-p","--pattern",nargs = '*' , help="list of pattern(s) to match ,please refer to Python Regex documentation .Default:'/download/' '/manuals' '/HelpDoc' '/reports/'",action="append",default=[["/download/","/manuals","/HelpDoc","/reports/"]])
-
-args = parser.parse_args()
-DIR_PATH=args.path
-PATTERNS=args.pattern
-if "nt" in os.name:
-    print ("Detected Windows like OS")
-    OS_IS_WIN=True
-
 def get_filepaths(directory,includePatterns,skip_patterns):
-
     print("building file paths recursively ... ")
     file_paths = []  # List which will store all of the full filepaths.
     # Walk the tree.
@@ -233,6 +220,18 @@ def get_filepaths(directory,includePatterns,skip_patterns):
                     if not skipFlag :
                         file_paths.append(filepath)
     return file_paths
+
+# Start of the Script
+parser = argparse.ArgumentParser()
+parser.add_argument("path", help="directory path to start scanning ")
+parser.add_argument("-p","--pattern",nargs = '*' , help="list of pattern(s) to match ,please refer to Python Regex documentation .Default:'/download/' '/manuals' '/HelpDoc' '/reports/'",action="append",default=[["/download/","/manuals","/HelpDoc","/reports/"]])
+
+args = parser.parse_args()
+DIR_PATH=args.path
+PATTERNS=args.pattern
+if "nt" in os.name:
+    print ("Detected Windows like OS")
+    OS_IS_WIN=True
 
 full_file_paths = get_filepaths(DIR_PATH,[".cfm","cfc"],[".svn",".git"])
 processor=FileProcessor(full_file_paths,PATTERNS[-1])  # -1  to always get the last , as if parm is submitted it's appended
