@@ -60,14 +60,16 @@ class FileProcessor:
         for post_line in post_lines:
             print (post_line)
         accept=self.read_acceptance()
+        resultLines=[pre_line]
         if not accept:
             self.skippedRecords.append(self.getCurrentProcessedRecord())
-            post_lines=pre_line
         #while not accept:
               #post_line=rlinput("Please Edit :\n",post_lines)
               #accept=read_acceptance()
-        self.modifiedRecrods.append(self.getCurrentProcessedRecord())
-        return post_lines
+        else:
+            self.modifiedRecrods.append(self.getCurrentProcessedRecord())
+            resultLines=post_lines
+        return resultLines
 
     def get_buffered_lines_indexes(self,lines,pos,window=5):
         if pos<0 or pos>len(lines):
@@ -81,17 +83,24 @@ class FileProcessor:
            end_index=len(lines)
         return int(start_index),int(end_index)
 
-    def draw_file_contents(self,filepath,lines,pos):
+    def clearScr(self):
+        return
         if OS_IS_WIN:
             os.system('cls')
         else:
             os.system('clear')
+
+    def draw_file_contents(self,filepath,lines,pos):
+        self.clearScr()
         print("File Contents:"+filepath)
         print("---------------")
         start_index,end_index=self.get_buffered_lines_indexes(lines,pos,5)
         for index in range(start_index,end_index):
             if index==pos:
-               print (bcolors.OKBLUE+lines[index]+bcolors.ENDC)
+                if OS_IS_WIN:
+                   print (lines[index])
+                else:
+                   print (bcolors.OKBLUE+lines[index]+bcolors.ENDC)
             else:
                 print(lines[index])
         print("=======================================================================================================================")
