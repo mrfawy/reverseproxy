@@ -126,7 +126,6 @@ class FileProcessor:
             convLine=convTemplate.format(replaceToken,textToBeReplaced)
             new_line=line[0:startIndex]+replaceToken+line[endIndex:len(line)]
             convLine=leadingSpacesTxt+convLine
-            B
             return [convLine,leadingSpacesTxt+"<cfoutput>",new_line,leadingSpacesTxt+"</cfoutput>"]
         else:
             print ("invalid processing ")
@@ -149,7 +148,6 @@ class FileProcessor:
         print("is matching with one or more patterns, it'll be edited")
         accept=self.read_acceptance()
         if accept:
-            B
             return True
         return False
 
