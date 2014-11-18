@@ -3,6 +3,7 @@ import http.client, urllib
 import os
 import re
 import argparse
+import lineProcessors
 
 OS_IS_WIN=False
 
@@ -112,24 +113,21 @@ class FileProcessor:
 
     def get_suggested_line(self,line,matched_pattern,count=1):
 
-        startIndex=line.find(matched_pattern)
-        if(startIndex!=-1):
-            endIndex=line.find('"',startIndex)
-            leadingSpacesNo=len(line) - len(line.lstrip())
-            if OS_IS_WIN:
-                leadingSpacesTxt=" ".join(" " for i in range(0,leadingSpacesNo))
-            else:
-                leadingSpacesTxt=" ".join("\t" for i in range(0,leadingSpacesNo))
-            convTemplate="""<cfinvoke component="NBP.NetBiosProxyHelper" method="getTemplatePathForACWithEncryptedValue" fileName="{1}" returnvariable="{0}" />"""
-            replaceToken="#encryptedValue"+str(count)+"#"
-            textToBeReplaced=line[startIndex:endIndex]
-            convLine=convTemplate.format(replaceToken,textToBeReplaced)
-            new_line=line[0:startIndex]+replaceToken+line[endIndex:len(line)]
-            convLine=leadingSpacesTxt+convLine
-            return [convLine,leadingSpacesTxt+"<cfoutput>",new_line,leadingSpacesTxt+"</cfoutput>"]
+        lineProcessorList=[ lineProcessors.SimpleColdFusionLinkProcessor(OS_IS_WIN)]
+        matchedLineProcessorsNum=0
+        for lineProcessor in lineProcessorList:
+            if lineProcessor.accepts(line,matched_pattern,self.currentProcessedFilePath):
+                lastMatchedLineProcessor=lineProcessor
+                matchedLineProcessorsNum+=1
+        #more than a match with line processors , they should be disjoint
+        if matchedLineProcessorsNum>1:
+                print("WARNING: multiple line seggesion matches , please check your acceptance criteria")
+        # no matched line processors
+        if matchedLineProcessorsNum == 0:
+                print("ERROR : can't match suggestion for this line")
+                return (["ERROR :No suggestion could be returned !!"])
         else:
-            print ("invalid processing ")
-            return ["ERROR!! : unable to retreive this line suggesstions!!"]
+            return lastMatchedLineProcessor.get_suggested_modification(line,matched_pattern,count)
 
     def is_file_contains_Patterns(self,patterns,filepath):
         lines=[]
