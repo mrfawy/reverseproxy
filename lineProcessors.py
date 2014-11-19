@@ -1,10 +1,22 @@
 import re
 
-#Only handles <a href="simpletext" /> in CF files
-class SimpleColdFusionLinkProcessor:
+
+class LineProcessor:
 
     def __init__(self,OS_IS_WIN):
         self.OS_IS_WIN=OS_IS_WIN
+    def accepts(line):
+        return True
+
+    def get_suggested_modification(self,line,matched_pattern,count=1):
+        return line
+
+
+#Only handles <a href="simpletext" /> in CF files
+class SimpleColdFusionLinkProcessor(LineProcessor):
+
+    def __init__(self,OS_IS_WIN):
+        LineProcessor.__init__(self,OS_IS_WIN)
 
     def accepts(self,line,matched_pattern,filepath):
         #check if file is a coldFusion
@@ -36,14 +48,3 @@ class SimpleColdFusionLinkProcessor:
             print ("invalid processing ")
             return ["ERROR!! : unable to retreive this line suggesstions!!"]
 
-#Implement similar processors
-"""
-    class SimpleJavascript:
-
-    def accepts(line):
-    if "window.open" in line.lower()
-    return True
-    def get_suggested_modification(line):
-    return line
-
-"""
