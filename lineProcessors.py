@@ -12,7 +12,11 @@ class LineProcessor:
         return line
 
 
-#Only handles <a href="simpletext" /> in CF files
+"""
+Only handles <a href="simpletext" /> in CF files
+no Id is defined fot the tag , no java sript of any kind exists
+"""
+
 class SimpleColdFusionLinkProcessor(LineProcessor):
 
     def __init__(self,OS_IS_WIN):
@@ -31,7 +35,6 @@ class SimpleColdFusionLinkProcessor(LineProcessor):
     def get_suggested_modification(self,line,matched_pattern,count=1):
         startIndex=line.find(matched_pattern)
         if(startIndex!=-1):
-            endIndex=line.find('"',startIndex)
             leadingSpacesNo=len(line) - len(line.lstrip())
             if self.OS_IS_WIN:
                 leadingSpacesTxt=" ".join(" " for i in range(0,leadingSpacesNo))
@@ -39,11 +42,16 @@ class SimpleColdFusionLinkProcessor(LineProcessor):
                 leadingSpacesTxt=" ".join("\t" for i in range(0,leadingSpacesNo))
             convTemplate="""<cfinvoke component="NBP.NetBiosProxyHelper" method="getTemplatePathForACWithEncryptedValue" fileName="{1}" returnvariable="{0}" />"""
             replaceToken="#encryptedValue"+str(count)+"#"
-            textToBeReplaced=line[startIndex:endIndex]
-            convLine=convTemplate.format(replaceToken,textToBeReplaced)
-            new_line=line[0:startIndex]+replaceToken+line[endIndex:len(line)]
+            hyberlinkTagIndex=line.find("<a")
+            hrefAtrrIndex=line.find("href",hyberlinkTagIndex)
+            hrefContentStartIndex=line.find("\"",hrefAtrrIndex)
+            hrefContentEndIndex=line.find("\"",hrefContentStartIndex+1)
+            idToken=" id=\"cfLinkId"+str(count)+"\" "
+            convLine=convTemplate.format(replaceToken,line[hrefContentStartIndex+1:hrefContentEndIndex])
+            new_line=line[0:hyberlinkTagIndex+2]+idToken+line[hrefAtrrIndex:hrefContentStartIndex+1]+replaceToken+line[hrefContentEndIndex:len(line)]
             convLine=leadingSpacesTxt+convLine
             return [convLine,leadingSpacesTxt+"<cfoutput>",new_line,leadingSpacesTxt+"</cfoutput>"]
+
         else:
             print ("invalid processing ")
             return ["ERROR!! : unable to retreive this line suggesstions!!"]
