@@ -47,32 +47,34 @@ class FileProcessor:
 #    finally:
 #       readline.set_startup_hook()
 
-    def read_acceptance(self,successFlag=True):
+    def read_acceptance(self):
         while True:
-            if successFlag:
-                choice=input("Do you accept this modification?[Y|N]")
-            else:
-                choice=input("Skip forward ?[Y:N]")
+            choice=input("Do you accept this modification?[Y|N]")
             if choice.lower()=="y":
                 return True
             if choice.lower()=="n":
                 return False
 
-    def prompt_line_Change(self,pre_line,post_lines,successFlag):
+    def prompt_line_Change(self,pre_line,post_lines,isValidSuggestion):
         print("Current Matching Line :\n "+pre_line)
         print("Suggested Modification:\n")
+
         for post_line in post_lines:
             print (post_line)
-        accept=self.read_acceptance(successFlag)
         resultLines=[pre_line]
-        if not accept:
+        if not isValidSuggestion:
+            choice=input("Skipping forward,press any key to continue ,...")
             self.skippedRecords.append(self.getCurrentProcessedRecord())
-        #while not accept:
-              #post_line=rlinput("Please Edit :\n",post_lines)
-              #accept=read_acceptance()
         else:
-            self.modifiedRecrods.append(self.getCurrentProcessedRecord())
-            resultLines=post_lines
+            accept=self.read_acceptance()
+            if not accept:
+                self.skippedRecords.append(self.getCurrentProcessedRecord())
+            #while not accept:
+                  #post_line=rlinput("Please Edit :\n",post_lines)
+                  #accept=read_acceptance()
+            else:
+                self.modifiedRecrods.append(self.getCurrentProcessedRecord())
+                resultLines=post_lines
         return resultLines
 
     def get_buffered_lines_indexes(self,lines,pos,window=5):
@@ -124,11 +126,12 @@ class FileProcessor:
                 matchedLineProcessorsNum+=1
         #more than a match with line processors , they should be disjoint
         if matchedLineProcessorsNum>1:
-                print("WARNING: multiple line seggesion matches , please check your acceptance criteria")
+                print("Error: multiple line seggesion matches , please check your acceptance criteria")
+                return {"successFlag":False,"postLines":[]}
         # no matched line processors
         if matchedLineProcessorsNum == 0:
-                print("ERROR : can't match suggestion for this line")
-                return {"successFlag":False,"post_lines":["ERROR :No suggestion could be returned !!"]}
+                print("Error : can't match suggestion for this line,no suggestions available !!")
+                return {"successFlag":False,"postLines":[]}
         else:
             return lastMatchedLineProcessor.get_suggested_modification(line,matched_pattern,count)
 
@@ -175,7 +178,7 @@ class FileProcessor:
                 self.draw_file_contents(filepath,old_lines,pos)
                 pre_line=line
                 resultMap=self.get_suggested_line(pre_line,matched_pattern,count)
-                post_lines=self.prompt_line_Change(pre_line,resultMap["post_lines"],resultMap["successFlag"])
+                post_lines=self.prompt_line_Change(pre_line,resultMap["postLines"],resultMap["successFlag"])
                 new_lines.extend(post_lines)
                 count+=1
             else:

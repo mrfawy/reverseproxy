@@ -2,3 +2,5 @@
 
 
 <cfset instance.values.RealTimePath = "Javascript:openNewWindow('/download/IT Tech Writing Only/WorkspaceTabDocuments/Dev-RealTime&Download.pdf','','')">
+
+<td width="80" class="center"><a id="38_1" class="displayinline" href="javascript:openNewWindow('/download/tutorials/Application_Submit_viewlet_swf.html',

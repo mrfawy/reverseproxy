@@ -8,6 +8,7 @@ class LineProcessor:
     def accepts(line):
         return True
 
+# return a map {SuccessFlag:"True when suggestions exist",PostLins:[array of new lines]}
     def get_suggested_modification(self,line,matched_pattern,count=1):
         return line
 
@@ -31,7 +32,6 @@ class SimpleColdFusionLinkProcessor(LineProcessor):
         #check no java script exists in the line
         if "window" in line.lower():
             return False
-        print ("INSIDE with ")
         return True
 
     def get_suggested_modification(self,line,matched_pattern,count=1):
@@ -52,11 +52,10 @@ class SimpleColdFusionLinkProcessor(LineProcessor):
             convLine=convTemplate.format(replaceToken,line[hrefContentStartIndex+1:hrefContentEndIndex])
             new_line=line[0:hyberlinkTagIndex+2]+idToken+line[hrefAtrrIndex:hrefContentStartIndex+1]+replaceToken+line[hrefContentEndIndex:len(line)]
             convLine=leadingSpacesTxt+convLine
-            return {"successFlag":True,"post_lines":[convLine,leadingSpacesTxt+"<cfoutput>",new_line,leadingSpacesTxt+"</cfoutput>"]}
-
+            return {"successFlag":True,"postLines":[convLine,leadingSpacesTxt+"<cfoutput>",new_line,leadingSpacesTxt+"</cfoutput>"]}
         else:
-            print ("invalid processing ")
-            return {"successFlag":False,"post_lines":["ERROR!! : unable to retreive this line suggesstions!!"]}
+            print ("ERROR!! : unable to retreive this line suggesstions!!")
+            return {"successFlag":False,"postlines":[]}
 
 
 """
@@ -116,9 +115,9 @@ class CFJSOpenNeWWindowLinkProcessor(LineProcessor):
             convLine=convTemplate.format(replaceToken,filepath)
             new_line=line[0:hrefEqualSignIndex+2]+"#"+replaceToken+"#"+line[jsEndIndex+1:len(line)]
             convLine=leadingSpacesTxt+convLine
-            return {"successFlag":True,"post_lines":[convLine,leadingSpacesTxt+"<cfoutput>",new_line,leadingSpacesTxt+"</cfoutput>"]}
+            return {"successFlag":True,"postLines":[convLine,leadingSpacesTxt+"<cfoutput>",new_line,leadingSpacesTxt+"</cfoutput>"]}
 
         else:
-            print ("invalid processing ")
-            return {"successFlag":False,"post_lines":["ERROR!! : unable to retreive this line suggesstions!!"]}
+            print ("ERROR!! : unable to retreive this line suggesstions!!")
+            return {"successFlag":False,"postLines":[]}
 
