@@ -47,20 +47,23 @@ class FileProcessor:
 #    finally:
 #       readline.set_startup_hook()
 
-    def read_acceptance(self):
+    def read_acceptance(self,successFlag=True):
         while True:
-            choice=input("Do you accept this modification?[Y|S]")
+            if successFlag:
+                choice=input("Do you accept this modification?[Y|N]")
+            else:
+                choice=input("Skip forward ?[Y:N]")
             if choice.lower()=="y":
                 return True
-            if choice.lower()=="s":
+            if choice.lower()=="n":
                 return False
 
-    def prompt_line_Change(self,pre_line,post_lines):
+    def prompt_line_Change(self,pre_line,post_lines,successFlag):
         print("Current Matching Line :\n "+pre_line)
         print("Suggested Modification:\n")
         for post_line in post_lines:
             print (post_line)
-        accept=self.read_acceptance()
+        accept=self.read_acceptance(successFlag)
         resultLines=[pre_line]
         if not accept:
             self.skippedRecords.append(self.getCurrentProcessedRecord())
@@ -113,7 +116,7 @@ class FileProcessor:
 
     def get_suggested_line(self,line,matched_pattern,count=1):
 
-        lineProcessorList=[ lineProcessors.SimpleColdFusionLinkProcessor(OS_IS_WIN)]
+        lineProcessorList=[ lineProcessors.SimpleColdFusionLinkProcessor(OS_IS_WIN),lineProcessors.CFJSOpenNeWWindowLinkProcessor(OS_IS_WIN)]
         matchedLineProcessorsNum=0
         for lineProcessor in lineProcessorList:
             if lineProcessor.accepts(line,matched_pattern,self.currentProcessedFilePath):
@@ -125,7 +128,7 @@ class FileProcessor:
         # no matched line processors
         if matchedLineProcessorsNum == 0:
                 print("ERROR : can't match suggestion for this line")
-                return (["ERROR :No suggestion could be returned !!"])
+                return {"successFlag":False,"post_lines":["ERROR :No suggestion could be returned !!"]}
         else:
             return lastMatchedLineProcessor.get_suggested_modification(line,matched_pattern,count)
 
@@ -171,8 +174,8 @@ class FileProcessor:
             if matched_pattern :
                 self.draw_file_contents(filepath,old_lines,pos)
                 pre_line=line
-                post_lines=self.get_suggested_line(pre_line,matched_pattern,count)
-                post_lines=self.prompt_line_Change(pre_line,post_lines)
+                resultMap=self.get_suggested_line(pre_line,matched_pattern,count)
+                post_lines=self.prompt_line_Change(pre_line,resultMap["post_lines"],resultMap["successFlag"])
                 new_lines.extend(post_lines)
                 count+=1
             else:
@@ -229,17 +232,25 @@ def get_filepaths(directory,includePatterns,skip_patterns):
 
 # Start of the Script
 parser = argparse.ArgumentParser()
-parser.add_argument("path", help="directory path to start scanning ")
-parser.add_argument("-p","--pattern",nargs = '*' , help="list of pattern(s) to match ,please refer to Python Regex documentation .Default:'/download/' '/manuals' '/HelpDoc' '/reports/'",action="append",default=[["/download/","/manuals","/HelpDoc","/reports/"]])
+parser.add_argument("-f","--file" ,help="file path to start scanning ")
+parser.add_argument("-d","--dir", help="directory path to start scanning ")
+parser.add_argument("-t","--pattern",nargs = '*' , help="list of pattern(s) to match ,please refer to Python Regex documentation .Default:'/download/' '/manuals' '/HelpDoc' '/reports/'",action="append",default=[["/download/","/manuals","/HelpDoc","/reports/"]])
 
 args = parser.parse_args()
-DIR_PATH=args.path
+DIR_PATH=args.dir
+FILE_PATH=args.file
+if DIR_PATH ==None and FILE_PATH == None:
+    print("Missing arguments, please specify at least a file with -f argument , or a dir in - p argument")
+    exit(1)
 PATTERNS=args.pattern
 if "nt" in os.name:
     print ("Detected Windows like OS")
     OS_IS_WIN=True
-
-full_file_paths = get_filepaths(DIR_PATH,[".cfm","cfc"],[".svn",".git"])
+full_file_paths=[]
+if DIR_PATH :
+    full_file_paths = get_filepaths(DIR_PATH,[".cfm","cfc"],[".svn",".git"])
+if FILE_PATH :
+    full_file_paths.append(FILE_PATH)
 processor=FileProcessor(full_file_paths,PATTERNS[-1])  # -1  to always get the last , as if parm is submitted it's appended
 processor.process_Files()
 processor.printSkippedRecords()
