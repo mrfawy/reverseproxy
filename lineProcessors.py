@@ -84,7 +84,7 @@ class CFJSOpenNeWWindowLinkProcessor(LineProcessor):
         if "href" not in line.lower():
             return False
         #check javascript:openWindow or open new window exists in the line
-        if re.match("javascript:openNewWindow",line):
+        if re.match("javascript:open(New)?Window",line):
             return False
         return True
 
