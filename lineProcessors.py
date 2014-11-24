@@ -121,3 +121,56 @@ class CFJSOpenNeWWindowLinkProcessor(LineProcessor):
             print ("ERROR!! : unable to retreive this line suggesstions!!")
             return {"successFlag":False,"postLines":[]}
 
+"""
+handles <cfset variable="javascript:openNewWindow('/download/tutorials/Application_Submit_viewlet_swf.html','','');">
+FileType :CF:
+"""
+
+class CFJSOpenNeWWindowCFSETProcessor(LineProcessor):
+
+    def __init__(self,OS_IS_WIN):
+        LineProcessor.__init__(self,OS_IS_WIN)
+
+    def accepts(self,line,matched_pattern,filepath):
+        #check if file is a coldFusion
+        if not (filepath.endswith(".cfc") or filepath.endswith(".cfm")):
+            return False
+
+        if "cfset" not in line.lower():
+            return False
+        #check javascript:openWindow or open new window exists in the line
+        if re.match("javascript:open(New)?Window",line):
+            return False
+        return True
+
+    def get_suggested_modification(self,line,matched_pattern,count=1):
+        startIndex=line.find(matched_pattern)
+        if(startIndex!=-1):
+            leadingSpacesNo=len(line) - len(line.lstrip())
+            if self.OS_IS_WIN:
+                leadingSpacesTxt=" ".join(" " for i in range(0,leadingSpacesNo))
+            else:
+                leadingSpacesTxt=" ".join("\t" for i in range(0,leadingSpacesNo))
+            convTemplate="""<cfinvoke component="NBP.NetBiosProxyHelper" method="getTemplatePathForACWithEncryptedValue" fileName="{1}" returnvariable="{0}" />"""
+            replaceToken="encryptedValue"+str(count)
+            cfsetTagIndex=line.find("<cfset")
+            equalSignIndex=line.find("=",cfsetTagIndex+1)
+            openingQtIndex=line.find("\"",equalSignIndex+1)
+            closingQtIndex=line.find("\"",openingQtIndex+1)
+            jsopenIndex=line.find("javascript:open",equalSignIndex+1)
+            hrefContentStartIndex=line.find("'",jsopenIndex+1)
+            hrefContentEndIndex=line.find("'",hrefContentStartIndex+1)
+            filepath=line[hrefContentStartIndex+1:hrefContentEndIndex]
+            idToken=""
+            # if not self.lineHasId(line):
+            #     idToken=" id=\"cfLinkId"+str(count)+"\" "
+            #     new_line=line[0:hyberlinkTagIndex+2]+idToken+line[hrefAtrrIndex:hrefContentStartIndex+1]+"#"+replaceToken+"#"+line[jsEndIndex:len(line)]
+            convLine=convTemplate.format(replaceToken,filepath)
+            new_line=line[0:openingQtIndex+1]+"#"+replaceToken+"#"+line[closingQtIndex:len(line)]
+            convLine=leadingSpacesTxt+convLine
+            return {"successFlag":True,"postLines":[convLine,leadingSpacesTxt+"<cfoutput>",new_line,leadingSpacesTxt+"</cfoutput>"]}
+
+        else:
+            print ("ERROR!! : unable to retreive this line suggesstions!!")
+            return {"successFlag":False,"postLines":[]}
+

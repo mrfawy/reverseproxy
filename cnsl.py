@@ -118,7 +118,7 @@ class FileProcessor:
 
     def get_suggested_line(self,line,matched_pattern,count=1):
 
-        lineProcessorList=[ lineProcessors.SimpleColdFusionLinkProcessor(OS_IS_WIN),lineProcessors.CFJSOpenNeWWindowLinkProcessor(OS_IS_WIN)]
+        lineProcessorList=[ lineProcessors.SimpleColdFusionLinkProcessor(OS_IS_WIN),lineProcessors.CFJSOpenNeWWindowLinkProcessor(OS_IS_WIN),lineProcessors.CFJSOpenNeWWindowCFSETProcessor(OS_IS_WIN)]
         matchedLineProcessorsNum=0
         for lineProcessor in lineProcessorList:
             if lineProcessor.accepts(line,matched_pattern,self.currentProcessedFilePath):
