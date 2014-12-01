@@ -84,7 +84,7 @@ class CFJSOpenNeWWindowLinkProcessor(LineProcessor):
         if "href" not in line.lower():
             return False
         #check javascript:openWindow or open new window exists in the line
-        if re.match("javascript:open(New)?Window",line):
+        if not re.search("javascript:open(New)?Window",line,re.IGNORECASE):
             return False
         return True
 
@@ -139,7 +139,8 @@ class CFJSOpenNeWWindowCFSETProcessor(LineProcessor):
         if "cfset" not in line.lower():
             return False
         #check javascript:openWindow or open new window exists in the line
-        if re.match("javascript:open(New)?Window",line):
+        if not re.search("javascript:open(New)?Window",line,re.IGNORECASE):
+            print("check accept on line : not match"+line)
             return False
         return True
 
